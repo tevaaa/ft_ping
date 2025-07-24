@@ -6,6 +6,8 @@
 # include <string.h>
 # include <sys/socket.h>
 # include <netinet/ip_icmp.h>
+# include <netinet/ip.h>
+# include <arpa/inet.h>
 
 int  build_icmp_packet(char *buf, int id, int seq);
 uint16_t checksum(void *data, int len);

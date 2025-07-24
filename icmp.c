@@ -16,8 +16,8 @@ int build_icmp_packet(char *buf, int id, int seq)
     memset(icmp, 0, sizeof(struct icmphdr));
     icmp->type = ICMP_ECHO;
     icmp->code = 0;
-    icmp->un.echo.id = id;
-    icmp->un.echo.sequence = seq;
+    icmp->un.echo.id = htons(id);
+    icmp->un.echo.sequence = htons(seq);
     icmp->checksum = 0;
 
     icmp->checksum = checksum((void *)icmp, sizeof(struct icmphdr));
@@ -74,7 +74,7 @@ void send_packet(int sockfd, struct sockaddr_in *dest, int id, int seq) {
 void receive_packet(int sockfd) {
     char buffer[1024];
     struct sockaddr_in sender;
-    socklent_t sender_len = sizeof(sender);
+    socklen_t sender_len = sizeof(sender);
 
     ssize_t received = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&sender, &sender_len);
     //buffer = [ IP HEADER ][ ICMP HEADER ][ ICMP DATA ]
@@ -91,10 +91,11 @@ void receive_packet(int sockfd) {
 
     // Parse ICMP header
     struct icmphdr *icmp = (struct icmphdr *)(buffer + ip_header_len);
-
     if (icmp->type == ICMP_ECHOREPLY)
     {
-        printf("✅ Received ICMP echo reply from %s\n", inet_ntoa(sender.sin_addr));
+        char ip_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
+        printf("✅ Received ICMP echo reply from %s ", ip_str);
         printf("    type=%d code=%d id=%d seq=%d\n",
                icmp->type, icmp->code,
                ntohs(icmp->un.echo.id),
