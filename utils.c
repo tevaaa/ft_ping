@@ -11,16 +11,17 @@ void perror_exit(const char *msg)
 }
 
 void print_usage(char *program_name) {
-    printf("Usage: %s [OPTION...] HOST\n", program_name);
+    printf("Usage: %s [OPTION...] HOST...\n", program_name);
     printf("Send ICMP ECHO_REQUEST packets to network hosts.\n\n");
-    printf("Options:\n");
-    printf("  -c NUMBER     stop after sending NUMBER packets\n");
-    printf("  -i NUMBER     wait NUMBER seconds between sending each packet\n");
-    printf("  -n            do not resolve host addresses\n");
-    printf("  -s NUMBER     send NUMBER data octets\n");
-    printf("  -v            verbose output\n");
-    printf("  -W NUMBER     time to wait for response\n");
-    printf("  -?            display this help and exit\n");
+    printf(" Options valid for all request types:\n\n");
+    printf("  -c=NUMBER                  stop after sending NUMBER packets\n");
+    printf("  -i=NUMBER                  wait NUMBER seconds between sending each packet\n");
+    printf("  -n                         do not resolve host addresses\n");
+    printf("  -v                         verbose output\n");
+    printf("  -W=N                       number of seconds to wait for response\n");
+    printf(" Options valid for --echo requests:\n\n");
+    printf("  -s=NUMBER                  send NUMBER data octets\n");
+    printf("  -?                         give this help list\n");
     exit(0);
 }
 

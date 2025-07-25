@@ -40,24 +40,6 @@ uint16_t checksum(void *data, int len) {
     return ~sum;
 }
 
-/*The sendto() function shall send a message through a connection-mode or connectionless-mode socket. If the socket is connectionless-mode, the message shall be sent to the address specified by dest_addr. If the socket is connection-mode, dest_addr shall be ignored.
-
-The sendto() function takes the following arguments:
-
-- socket
-Specifies the socket file descriptor.
-- message
-Points to a buffer containing the message to be sent.
-- length
-Specifies the size of the message in bytes.
-- flags
-Specifies the type of message transmission.
-dest_addr
-Points to a sockaddr structure containing the destination address. The length and format of the address depend on the address family of the socket.
-dest_len
-Specifies the length of the sockaddr structure pointed to by the dest_addr argument.
-*/
-
 void send_packet(int sockfd, struct sockaddr_in *dest, int id, int seq, struct timeval *send_time) {
     char packet[64];
     int packet_len = build_icmp_packet(packet, id, seq);
@@ -68,23 +50,26 @@ void send_packet(int sockfd, struct sockaddr_in *dest, int id, int seq, struct t
 
     if (sent < 0)
         perror("sendto");
-    //else
-    //    printf("✅ ICMP echo request sent (seq=%d)\n", seq);
-
 }
 
-double receive_packet(int sockfd, struct timeval *send_time) {
+double receive_packet(int sockfd, struct timeval *send_time, int verbose) {
     char buffer[1024];
     struct sockaddr_in sender;
     struct timeval recv_time;
 
-    socklen_t sender_len = sizeof(sender);
+    struct iovec iov = { .iov_base = buffer, .iov_len = sizeof(buffer) };
+    struct msghdr msg = { 
+        .msg_name = &sender,
+        .msg_namelen = sizeof(sender),
+        .msg_iov = &iov, 
+        .msg_iovlen = 1 
+    };
 
-    ssize_t received = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&sender, &sender_len);
+    ssize_t nb_bytes = recvmsg(sockfd, &msg, 0);
     gettimeofday(&recv_time, NULL);
 
-    if (received < 0) {
-        perror("recvfrom");
+    if (nb_bytes < 0) {
+        perror("recvmsg");
         return -1;
     }
 
@@ -101,12 +86,31 @@ double receive_packet(int sockfd, struct timeval *send_time) {
 
         char ip_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
-        printf("64 bytes from %s: icmp_seq=%d ttl=%d time=%.1f ms\n", 
-               ip_str, ntohs(icmp->un.echo.sequence), ip_header->ip_ttl, rtt);
+        printf("%d bytes from %s: icmp_seq=%d ttl=%d time=%.1f ms\n",
+            (int)nb_bytes, ip_str, ntohs(icmp->un.echo.sequence), ip_header->ip_ttl, rtt);
         return rtt;
+    }
+    else {
+        if (icmp->type == ICMP_DEST_UNREACH) {
+            char ip_str[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
+            
+            char *error_msg;
+            switch (icmp->code) {
+                case ICMP_HOST_UNREACH: error_msg = "Destination Host Unreachable"; break;
+                case ICMP_NET_UNREACH: error_msg = "Destination Net Unreachable"; break;
+                case ICMP_PORT_UNREACH: error_msg = "Destination Port Unreachable"; break;
+                default: error_msg = "Destination Unreachable"; break;
+            }
+            
+            printf("%d bytes from %s: %s\n", (int)nb_bytes, ip_str, error_msg);
+        }
+        else if (verbose) {
+            char ip_str[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
+            printf("From %s: icmp_type=%d icmp_code=%d\n", 
+                   ip_str, icmp->type, icmp->code);
+        }
     }
     return -1;
 }
-
-
-// receive_packet()

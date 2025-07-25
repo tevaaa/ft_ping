@@ -19,7 +19,6 @@ void resolve_host(const char *target, struct sockaddr_in *addr) {
 int create_socket(void)
 {
     int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-    printf("Socket created with fd: %d\n", sockfd);
     if (sockfd < 0)
         perror_exit("socket");
 
