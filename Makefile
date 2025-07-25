@@ -8,7 +8,7 @@ SRC = main.c init.c utils.c icmp.c
 all: $(NAME)
 
 $(NAME): $(SRC)
-	$(CC) $(CFLAGS) $(SRC) -o $(NAME)
+	$(CC) $(CFLAGS) $(SRC) -o $(NAME) -lm
 
 clean:
 	rm -f $(NAME)

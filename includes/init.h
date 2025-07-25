@@ -14,6 +14,7 @@
 # include <stdio.h>         
 # include <signal.h>
 # include "utils.h"
+# include <math.h>
 
 void    resolve_host(const char *target, struct sockaddr_in *addr);
 int     create_socket(void);

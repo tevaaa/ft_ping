@@ -58,31 +58,34 @@ dest_len
 Specifies the length of the sockaddr structure pointed to by the dest_addr argument.
 */
 
-void send_packet(int sockfd, struct sockaddr_in *dest, int id, int seq) {
+void send_packet(int sockfd, struct sockaddr_in *dest, int id, int seq, struct timeval *send_time) {
     char packet[64];
     int packet_len = build_icmp_packet(packet, id, seq);
+
+    gettimeofday(send_time, NULL);
 
     ssize_t sent = sendto(sockfd, packet, packet_len, 0, (struct sockaddr *)dest, sizeof(*dest));
 
     if (sent < 0)
         perror("sendto");
-    else
-        printf("✅ ICMP echo request sent (seq=%d)\n", seq);
+    //else
+    //    printf("✅ ICMP echo request sent (seq=%d)\n", seq);
 
 }
 
-void receive_packet(int sockfd) {
+double receive_packet(int sockfd, struct timeval *send_time) {
     char buffer[1024];
     struct sockaddr_in sender;
+    struct timeval recv_time;
+
     socklen_t sender_len = sizeof(sender);
 
     ssize_t received = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&sender, &sender_len);
-    //buffer = [ IP HEADER ][ ICMP HEADER ][ ICMP DATA ]
-
+    gettimeofday(&recv_time, NULL);
 
     if (received < 0) {
         perror("recvfrom");
-        return;
+        return -1;
     }
 
     // Parse IP header
@@ -93,18 +96,16 @@ void receive_packet(int sockfd) {
     struct icmphdr *icmp = (struct icmphdr *)(buffer + ip_header_len);
     if (icmp->type == ICMP_ECHOREPLY)
     {
+        double rtt = (recv_time.tv_sec - send_time->tv_sec) * 1000.0 + 
+                     (recv_time.tv_usec - send_time->tv_usec) / 1000.0;
+
         char ip_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
-        printf("✅ Received ICMP echo reply from %s ", ip_str);
-        printf("    type=%d code=%d id=%d seq=%d\n",
-               icmp->type, icmp->code,
-               ntohs(icmp->un.echo.id),
-               ntohs(icmp->un.echo.sequence));
+        printf("64 bytes from %s: icmp_seq=%d ttl=%d time=%.1f ms\n", 
+               ip_str, ntohs(icmp->un.echo.sequence), ip_header->ip_ttl, rtt);
+        return rtt;
     }
-    else
-    {
-        printf("⚠️ Received non-echo packet (type=%d code=%d)\n", icmp->type, icmp->code);
-    }
+    return -1;
 }
 
 
