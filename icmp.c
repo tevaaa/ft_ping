@@ -9,19 +9,26 @@ struct icmphdr {
   uint16_t sequence;  // Incrémenté à chaque ping
 };*/
 
-int build_icmp_packet(char *buf, int id, int seq)
+int build_icmp_packet(char *buf, int id, int seq, int data_size)
 {
     struct icmphdr *icmp = (struct icmphdr *)buf;
+    
+    int total_size = sizeof(struct icmphdr) + data_size;
 
-    memset(icmp, 0, sizeof(struct icmphdr));
+    memset(buf, 0, total_size);
     icmp->type = ICMP_ECHO;
     icmp->code = 0;
     icmp->un.echo.id = htons(id);
     icmp->un.echo.sequence = htons(seq);
     icmp->checksum = 0;
 
-    icmp->checksum = checksum((void *)icmp, sizeof(struct icmphdr));
-    return sizeof(struct icmphdr);
+    if (data_size >= (int)sizeof(struct timeval)) {
+        struct timeval *tv = (struct timeval *)(buf + sizeof(struct icmphdr));
+        gettimeofday(tv, NULL);
+    }
+
+    icmp->checksum = checksum((void *)icmp, total_size);
+    return total_size;
 }
 
 uint16_t checksum(void *data, int len) {
@@ -40,9 +47,9 @@ uint16_t checksum(void *data, int len) {
     return ~sum;
 }
 
-void send_packet(int sockfd, struct sockaddr_in *dest, int id, int seq, struct timeval *send_time) {
-    char packet[64];
-    int packet_len = build_icmp_packet(packet, id, seq);
+void send_packet(int sockfd, struct sockaddr_in *dest, int id, int seq, int data_size, struct timeval *send_time) {
+    char packet[MAX_PACKET_SIZE];
+    int packet_len = build_icmp_packet(packet, id, seq, data_size);
 
     gettimeofday(send_time, NULL);
 
@@ -52,8 +59,8 @@ void send_packet(int sockfd, struct sockaddr_in *dest, int id, int seq, struct t
         perror("sendto");
 }
 
-double receive_packet(int sockfd, struct timeval *send_time, int verbose) {
-    char buffer[1024];
+double receive_packet(int sockfd, struct timeval *send_time, int verbose, int timeout_sec) {
+    char buffer[MAX_PACKET_SIZE];
     struct sockaddr_in sender;
     struct timeval recv_time;
 
@@ -64,6 +71,15 @@ double receive_packet(int sockfd, struct timeval *send_time, int verbose) {
         .msg_iov = &iov, 
         .msg_iovlen = 1 
     };
+
+    struct timeval timeout;
+    timeout.tv_sec = timeout_sec;
+    timeout.tv_usec = 0;
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        perror("setsockopt timeout");
+        return -1;
+    }
 
     ssize_t nb_bytes = recvmsg(sockfd, &msg, 0);
     gettimeofday(&recv_time, NULL);
@@ -76,6 +92,7 @@ double receive_packet(int sockfd, struct timeval *send_time, int verbose) {
     // Parse IP header
     struct ip *ip_header = (struct ip*)buffer;
     int ip_header_len = ip_header->ip_hl * 4; // *4 -> we received the amount of 32bits (4 octets) we have in the header 5 = 5*4 = 20 octets
+    nb_bytes -= ip_header_len;
 
     // Parse ICMP header
     struct icmphdr *icmp = (struct icmphdr *)(buffer + ip_header_len);
@@ -86,7 +103,7 @@ double receive_packet(int sockfd, struct timeval *send_time, int verbose) {
 
         char ip_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
-        printf("%d bytes from %s: icmp_seq=%d ttl=%d time=%.1f ms\n",
+        printf("%d bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",
             (int)nb_bytes, ip_str, ntohs(icmp->un.echo.sequence), ip_header->ip_ttl, rtt);
         return rtt;
     }

@@ -13,14 +13,12 @@ void perror_exit(const char *msg)
 void print_usage(char *program_name) {
     printf("Usage: %s [OPTION...] HOST...\n", program_name);
     printf("Send ICMP ECHO_REQUEST packets to network hosts.\n\n");
-    printf(" Options valid for all request types:\n\n");
-    printf("  -c=NUMBER                  stop after sending NUMBER packets\n");
-    printf("  -i=NUMBER                  wait NUMBER seconds between sending each packet\n");
+    printf("  -c NUMBER                  stop after sending NUMBER packets\n");
+    printf("  -i NUMBER                  wait NUMBER seconds between sending each packet\n");
     printf("  -n                         do not resolve host addresses\n");
     printf("  -v                         verbose output\n");
-    printf("  -W=N                       number of seconds to wait for response\n");
-    printf(" Options valid for --echo requests:\n\n");
-    printf("  -s=NUMBER                  send NUMBER data octets\n");
+    printf("  -W NUMBER                  NUMBER of seconds to wait for response\n");
+    printf("  -s NUMBER                  send NUMBER data octets\n");
     printf("  -?                         give this help list\n");
     exit(0);
 }
@@ -126,7 +124,7 @@ t_ping_config parse_arguments(int argc, char **argv) {
                 exit(2);
             }
             config.packetsize = atoi(argv[i]);
-            if (config.packetsize < 0 || config.packetsize > 65507) {
+            if (config.packetsize < 0 || config.packetsize > 65399) {
                 fprintf(stderr, "%s: invalid packet size: %d\n", argv[0], config.packetsize);
                 exit(2);
             }

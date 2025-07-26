@@ -41,10 +41,10 @@ int main(int argc, char **argv)
         struct timeval send_time;
         double rtt;
 
-        send_packet(sockfd, &target_addr, id, seq, &send_time);
+        send_packet(sockfd, &target_addr, id, seq, config.packetsize, &send_time);
         packets_sent ++;
 
-        rtt = receive_packet(sockfd, &send_time, config.verbose);
+        rtt = receive_packet(sockfd, &send_time, config.verbose, config.timeout);
         if (rtt > 0) {
             packets_received ++;
             // stats
@@ -54,7 +54,8 @@ int main(int argc, char **argv)
             rtt_sum_squares += rtt * rtt;
 
         }
-
+        if (seq == config.count - 1 && config.count > 0)
+            break;
         seq++;
         usleep(config.interval * 1000000);
     }
