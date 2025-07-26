@@ -31,10 +31,8 @@ void print_version(void) {
 int is_valid_number(char *str) {
     if (!str || *str == '\0') return 0;
     
-    // Gère les nombres négatifs
     if (*str == '-') str++;
     
-    // Vérifie que tous les caractères sont des chiffres ou '.'
     while (*str) {
         if (*str != '.' && (*str < '0' || *str > '9'))
             return 0;
@@ -50,7 +48,7 @@ t_ping_config parse_arguments(int argc, char **argv) {
     config.interval = 1.0;
     config.timeout = 1;
     config.packetsize = 56;
-    config.count = 0;  // 0 = infini
+    config.count = 0;
     
     int i = 1;
     while (i < argc) {

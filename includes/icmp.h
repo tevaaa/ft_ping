@@ -12,6 +12,7 @@
 # include <arpa/inet.h>
 # include <sys/time.h>
 # include <sys/uio.h>
+# include <errno.h>
 
 int  build_icmp_packet(char *buf, int id, int seq, int data_size);
 uint16_t checksum(void *data, int len);
