@@ -44,7 +44,7 @@ int main(int argc, char **argv)
         send_packet(sockfd, &target_addr, id, seq, config.packetsize, &send_time);
         packets_sent ++;
 
-        rtt = receive_packet(sockfd, &send_time, config.verbose, config.timeout);
+        rtt = receive_packet(sockfd, &send_time, config, id);
         if (rtt > 0) {
             packets_received ++;
             // stats

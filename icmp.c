@@ -12,7 +12,6 @@ struct icmphdr {
 int build_icmp_packet(char *buf, int id, int seq, int data_size)
 {
     struct icmphdr *icmp = (struct icmphdr *)buf;
-    
     int total_size = sizeof(struct icmphdr) + data_size;
 
     memset(buf, 0, total_size);
@@ -59,7 +58,7 @@ void send_packet(int sockfd, struct sockaddr_in *dest, int id, int seq, int data
         perror("sendto");
 }
 
-double receive_packet(int sockfd, struct timeval *send_time, int verbose, int timeout_sec) {
+double receive_packet(int sockfd, struct timeval *send_time, t_ping_config config, int our_id) {
     char buffer[MAX_PACKET_SIZE];
     struct sockaddr_in sender;
     struct timeval recv_time;
@@ -73,7 +72,7 @@ double receive_packet(int sockfd, struct timeval *send_time, int verbose, int ti
     };
 
     struct timeval timeout;
-    timeout.tv_sec = timeout_sec;
+    timeout.tv_sec = config.timeout;
     timeout.tv_usec = 0;
 
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
@@ -81,34 +80,58 @@ double receive_packet(int sockfd, struct timeval *send_time, int verbose, int ti
         return -1;
     }
 
-    ssize_t nb_bytes = recvmsg(sockfd, &msg, 0);
-    gettimeofday(&recv_time, NULL);
+    while (1) {
+        ssize_t nb_bytes = recvmsg(sockfd, &msg, 0);
+        gettimeofday(&recv_time, NULL);
 
-    if (nb_bytes < 0) {
-        perror("recvmsg");
-        return -1;
-    }
+        if (nb_bytes < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return -1; // Timeout
+            }
+            perror("recvmsg");
+            return -1;
+        }
 
-    // Parse IP header
-    struct ip *ip_header = (struct ip*)buffer;
-    int ip_header_len = ip_header->ip_hl * 4; // *4 -> we received the amount of 32bits (4 octets) we have in the header 5 = 5*4 = 20 octets
-    nb_bytes -= ip_header_len;
+        // Parse IP header
+        struct ip *ip_header = (struct ip*)buffer;
+        int ip_header_len = ip_header->ip_hl * 4;
+        nb_bytes -= ip_header_len;
 
-    // Parse ICMP header
-    struct icmphdr *icmp = (struct icmphdr *)(buffer + ip_header_len);
-    if (icmp->type == ICMP_ECHOREPLY)
-    {
-        double rtt = (recv_time.tv_sec - send_time->tv_sec) * 1000.0 + 
-                     (recv_time.tv_usec - send_time->tv_usec) / 1000.0;
+        // Parse ICMP header
+        struct icmphdr *icmp = (struct icmphdr *)(buffer + ip_header_len);
+        
+        if (icmp->type == ICMP_ECHO && ntohs(icmp->un.echo.id) == our_id) {
+            continue;
+        }
 
         char ip_str[INET_ADDRSTRLEN];
+        char display_addr[256];
+        
         inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
-        printf("%d bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",
-            (int)nb_bytes, ip_str, ntohs(icmp->un.echo.sequence), ip_header->ip_ttl, rtt);
-        return rtt;
-    }
-    else {
-        if (icmp->type == ICMP_DEST_UNREACH) {
+        
+        if (config.numeric) {
+            strcpy(display_addr, ip_str);
+        } else {
+            char hostname[256];
+            if (getnameinfo((struct sockaddr*)&sender, sizeof(sender), 
+                           hostname, sizeof(hostname), NULL, 0, 0) == 0) {
+                strcpy(display_addr, hostname);
+            } else {
+                strcpy(display_addr, ip_str);
+            }
+        }
+
+        if (icmp->type == ICMP_ECHOREPLY && ntohs(icmp->un.echo.id) == our_id) {
+            double rtt = (recv_time.tv_sec - send_time->tv_sec) * 1000.0 + 
+                         (recv_time.tv_usec - send_time->tv_usec) / 1000.0;
+
+            char ip_str[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
+            printf("%d bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",
+                (int)nb_bytes, ip_str, ntohs(icmp->un.echo.sequence), ip_header->ip_ttl, rtt);
+            return rtt;
+        }
+        else if (icmp->type == ICMP_DEST_UNREACH) {
             char ip_str[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
             
@@ -121,13 +144,13 @@ double receive_packet(int sockfd, struct timeval *send_time, int verbose, int ti
             }
             
             printf("%d bytes from %s: %s\n", (int)nb_bytes, ip_str, error_msg);
+            return -1;
         }
-        else if (verbose) {
+        else if (config.verbose) {
             char ip_str[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
             printf("From %s: icmp_type=%d icmp_code=%d\n", 
                    ip_str, icmp->type, icmp->code);
         }
     }
-    return -1;
 }

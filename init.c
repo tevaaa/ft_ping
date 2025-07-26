@@ -10,7 +10,8 @@ void resolve_host(const char *target, struct sockaddr_in *addr) {
 
     int ret = getaddrinfo(target, NULL, &hints, &res);
     if (ret != 0) {
-        printf("./ft_ping: %s: %s\n", target, gai_strerror(ret));
+        printf("./ft_ping: %s: unknown host\n", target);
+        //printf("./ft_ping: %s: %s\n", target, gai_strerror(ret));
         exit(EXIT_FAILURE);
     }
 
