@@ -11,7 +11,6 @@ typedef struct s_ping_config {
     int     packetsize;        // -s size (data octets)
 } t_ping_config;
 
-// Fonctions de parsing
 t_ping_config   parse_arguments(int argc, char **argv);
 void            print_usage(char *program_name);
 void            print_version(void);

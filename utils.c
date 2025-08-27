@@ -6,7 +6,7 @@
 
 void perror_exit(const char *msg)
 {
-    perror(msg);   // prints: <msg>: <system error>
+    perror(msg);
     exit(EXIT_FAILURE);
 }
 

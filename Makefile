@@ -1,7 +1,7 @@
 NAME = ft_ping
 
 CC = cc
-CFLAGS = -Wall -Wextra
+CFLAGS = -Wall -Wextra -Werror
 
 SRC = main.c init.c utils.c icmp.c
 

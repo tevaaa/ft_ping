@@ -23,7 +23,7 @@ int create_socket(void)
 {
     int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if (sockfd < 0)
-        perror_exit("socket");
+        printf("ft_ping: Lacking privilege for icmp socket.\n"), exit(EXIT_FAILURE);
 
     return sockfd;
 }
