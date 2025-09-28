@@ -49,6 +49,7 @@ t_ping_config parse_arguments(int argc, char **argv) {
     config.timeout = 1;
     config.packetsize = 56;
     config.count = 0;
+    config.ttl = 64;
     
     int i = 1;
     while (i < argc) {
@@ -104,6 +105,26 @@ t_ping_config parse_arguments(int argc, char **argv) {
             config.timeout = atoi(argv[i]);
             if (config.timeout <= 0) {
                 fprintf(stderr, "%s: invalid timeout: %d\n", argv[0], config.timeout);
+                exit(2);
+            }
+        }
+        // Flag --ttl 
+        else if (strcmp(argv[i], "--ttl") == 0) {
+            if (++i >= argc) {
+                fprintf(stderr, "%s: option requires an argument -- ttl\n", argv[0]);
+                exit(2);
+            }
+            if (!is_valid_number(argv[i])) {
+                fprintf(stderr, "%s: invalid timeout: '%s'\n", argv[0], argv[i]);
+                exit(2);
+            }
+            config.ttl = atoi(argv[i]);
+            if (config.ttl == 0) {
+                fprintf(stderr, "%s: option value too small: %d\n", argv[0], config.ttl);
+                exit(2);
+            }
+            if (config.ttl > 255) {
+                fprintf(stderr, "%s: option value too big: %d\n", argv[0], config.ttl);
                 exit(2);
             }
         }

@@ -16,7 +16,7 @@
 # include <math.h>
 
 void    resolve_host(const char *target, struct sockaddr_in *addr);
-int     create_socket(void);
+int     create_socket(int ttl);
 void    setup_signal_handler(void (*handler)(int));
 
 #endif

@@ -100,13 +100,13 @@ double receive_packet(int sockfd, struct timeval *send_time, t_ping_config confi
         // Parse ICMP header
         struct icmphdr *icmp = (struct icmphdr *)(buffer + ip_header_len);
         
+        char ip_str[INET_ADDRSTRLEN];
+        char display_addr[256];
+        
         if (icmp->type == ICMP_ECHO && ntohs(icmp->un.echo.id) == our_id) {
             continue;
         }
 
-        char ip_str[INET_ADDRSTRLEN];
-        char display_addr[256];
-        
         inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
         
         if (config.numeric) {
@@ -120,8 +120,18 @@ double receive_packet(int sockfd, struct timeval *send_time, t_ping_config confi
                 strcpy(display_addr, ip_str);
             }
         }
-
-        if (icmp->type == ICMP_ECHOREPLY && ntohs(icmp->un.echo.id) == our_id) {
+        if (icmp->type == ICMP_TIME_EXCEEDED) {
+            if (icmp->code == ICMP_EXC_TTL) {
+                inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
+                printf("%d bytes from %s (%s): Time to live exceeded\n", (int)nb_bytes, display_addr, ip_str);
+            }
+            if (config.verbose) {
+                printf("ICMP: type=%d code=%d from %s\n", icmp->type, icmp->code, ip_str);
+                // Tu peux ajouter l'hexdump ici
+            }
+            return -1; // Erreur, pas un RTT valide
+        }
+        else if (icmp->type == ICMP_ECHOREPLY && ntohs(icmp->un.echo.id) == our_id) {
             double rtt = (recv_time.tv_sec - send_time->tv_sec) * 1000.0 + 
                          (recv_time.tv_usec - send_time->tv_usec) / 1000.0;
 

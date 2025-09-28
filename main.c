@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     int id = getpid() & 0XFFFF; // 32 -> 16 BITS
 
     resolve_host(config.target, &target_addr);
-    sockfd = create_socket();
+    sockfd = create_socket(config.ttl);
 
     printf("PING %s (%s): %d data bytes", 
         config.target, inet_ntoa(target_addr.sin_addr), config.packetsize);

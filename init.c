@@ -11,7 +11,6 @@ void resolve_host(const char *target, struct sockaddr_in *addr) {
     int ret = getaddrinfo(target, NULL, &hints, &res);
     if (ret != 0) {
         printf("./ft_ping: %s: unknown host\n", target);
-        //printf("./ft_ping: %s: %s\n", target, gai_strerror(ret));
         exit(EXIT_FAILURE);
     }
 
@@ -19,12 +18,16 @@ void resolve_host(const char *target, struct sockaddr_in *addr) {
     freeaddrinfo(res);
 }
 
-int create_socket(void)
+int create_socket(int ttl)
 {
     int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if (sockfd < 0)
         printf("ft_ping: Lacking privilege for icmp socket.\n"), exit(EXIT_FAILURE);
 
+    if (setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) < 0) {
+        perror("setsockopt TTL");
+        exit(EXIT_FAILURE);
+    }
     return sockfd;
 }
 
