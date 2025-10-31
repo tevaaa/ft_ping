@@ -58,6 +58,71 @@ void send_packet(int sockfd, struct sockaddr_in *dest, int id, int seq, int data
         perror("sendto");
 }
 
+#include <stdio.h>
+#include <ctype.h>
+
+#define HEXDUMP_COLS 16
+
+void print_hexdump(const void *addr, int len) {
+    int i;
+    unsigned char buffLine[HEXDUMP_COLS + 1];
+    const unsigned char *pc = (const unsigned char *)addr;
+
+    if (len == 0) {
+        printf("ZERO LENGTH\n");
+        return;
+    }
+
+    // Traiter chaque octet dans les données
+    for (i = 0; i < len; i++) {
+        // Nouvelle ligne (ou première ligne) : afficher l'offset
+        if ((i % HEXDUMP_COLS) == 0) {
+            if (i != 0) {
+                // Afficher la partie ASCII de la ligne précédente
+                printf("  %s\n", buffLine);
+            }
+            // Afficher l'offset actuel
+            printf("  %04x: ", i);
+        }
+
+        // Afficher l'octet actuel en hexadécimal
+        printf("%02x ", pc[i]);
+
+        // Préparer le caractère pour la partie ASCII
+        if ((pc[i] < 0x20) || (pc[i] > 0x7e)) {
+            buffLine[i % HEXDUMP_COLS] = '.';
+        } else {
+            buffLine[i % HEXDUMP_COLS] = pc[i];
+        }
+        buffLine[(i % HEXDUMP_COLS) + 1] = '\0'; // NUL-terminer la chaîne ASCII
+    }
+
+    // Afficher la partie ASCII de la dernière ligne et rembourrer si nécessaire
+    while ((i % HEXDUMP_COLS) != 0) {
+        printf("   "); // 3 espaces pour simuler "%02x "
+        i++;
+    }
+    printf("  %s\n", buffLine);
+    const struct ip *ip_hdr = (struct ip *)addr;
+    printf("Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src	Dst	Data\n");
+    printf(" %1x", ip_hdr->ip_v);
+    printf("  %1x", ip_hdr->ip_hl);
+    printf(" %02x", ip_hdr->ip_tos);
+    printf("  %04x", ntohs(ip_hdr->ip_len));
+    printf(" %04x", ip_hdr->ip_id);
+    // find flags 3 bits 
+    printf("   %01x ", (ntohs(ip_hdr->ip_off) >> 13) & 0x7);
+    printf("%04x ", ntohs(ip_hdr->ip_off) & 0x1FFF);
+    printf(" %02x", ip_hdr->ip_ttl);
+    printf("  %02x", ip_hdr->ip_p);
+    printf(" %04x", ntohs(ip_hdr->ip_sum));
+    printf(" %s", inet_ntoa(ip_hdr->ip_src));
+    printf("  %s", inet_ntoa(ip_hdr->ip_dst));
+
+    printf("\n");
+
+}
+
 double receive_packet(int sockfd, struct timeval *send_time, t_ping_config config, int our_id) {
     char buffer[MAX_PACKET_SIZE];
     struct sockaddr_in sender;
@@ -127,12 +192,14 @@ double receive_packet(int sockfd, struct timeval *send_time, t_ping_config confi
             }
             if (config.verbose) {
                 // Le paquet original est après l'en-tête ICMP d'erreur
-        struct ip *orig_ip = (struct ip*)((char*)icmp + sizeof(struct icmphdr));
-        int orig_ip_len = orig_ip->ip_hl * 4;
+                struct ip *orig_ip = (struct ip*)((char*)icmp + sizeof(struct icmphdr));
+                int orig_ip_len = orig_ip->ip_hl * 4;
+                struct icmphdr *orig_icmp = (struct icmphdr*)((char*)orig_ip + orig_ip->ip_hl * 4);
         
-        // Affiche l'IP header original
-        print_hexdump("IP Hdr Dump:", (unsigned char*)orig_ip, orig_ip_len);
-                //printf("ICMP: type=%d code=%d from %s\n", icmp->type, icmp->code, ip_str);
+                printf("IP Hdr Dump:\n");
+                print_hexdump((unsigned char*)orig_ip, orig_ip_len);
+                printf("ICMP: type %d, code %d, size %d, id 0x%x, seq 0x%04x\n", orig_icmp->type, orig_icmp->code, ntohs(orig_ip->ip_len) - orig_ip_len, ntohs(orig_icmp->un.echo.id), ntohs(orig_icmp->un.echo.sequence));
+
             }
             return -1;
         }
