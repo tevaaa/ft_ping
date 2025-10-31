@@ -9,7 +9,7 @@ typedef struct s_ping_config {
     int     timeout;           // -W timeout (secondes)  
     int     numeric;           // -n flag (pas de reverse DNS)
     int     packetsize;        // -s size (data octets)
-    int     ttl;
+    int     ttl;               // --ttl (Time To Live)
 } t_ping_config;
 
 t_ping_config   parse_arguments(int argc, char **argv);

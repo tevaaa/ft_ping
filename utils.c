@@ -19,6 +19,7 @@ void print_usage(char *program_name) {
     printf("  -v                         verbose output\n");
     printf("  -W NUMBER                  NUMBER of seconds to wait for response\n");
     printf("  -s NUMBER                  send NUMBER data octets\n");
+    printf("  --ttl NUMBER               specify NUMBER as time to live\n");
     printf("  -?                         give this help list\n");
     exit(0);
 }

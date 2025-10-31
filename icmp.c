@@ -126,23 +126,26 @@ double receive_packet(int sockfd, struct timeval *send_time, t_ping_config confi
                 printf("%d bytes from %s (%s): Time to live exceeded\n", (int)nb_bytes, display_addr, ip_str);
             }
             if (config.verbose) {
-                printf("ICMP: type=%d code=%d from %s\n", icmp->type, icmp->code, ip_str);
-                // Tu peux ajouter l'hexdump ici
+                // Le paquet original est après l'en-tête ICMP d'erreur
+        struct ip *orig_ip = (struct ip*)((char*)icmp + sizeof(struct icmphdr));
+        int orig_ip_len = orig_ip->ip_hl * 4;
+        
+        // Affiche l'IP header original
+        print_hexdump("IP Hdr Dump:", (unsigned char*)orig_ip, orig_ip_len);
+                //printf("ICMP: type=%d code=%d from %s\n", icmp->type, icmp->code, ip_str);
             }
-            return -1; // Erreur, pas un RTT valide
+            return -1;
         }
         else if (icmp->type == ICMP_ECHOREPLY && ntohs(icmp->un.echo.id) == our_id) {
             double rtt = (recv_time.tv_sec - send_time->tv_sec) * 1000.0 + 
                          (recv_time.tv_usec - send_time->tv_usec) / 1000.0;
 
-            char ip_str[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
             printf("%d bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",
                 (int)nb_bytes, ip_str, ntohs(icmp->un.echo.sequence), ip_header->ip_ttl, rtt);
             return rtt;
         }
         else if (icmp->type == ICMP_DEST_UNREACH) {
-            char ip_str[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
             
             char *error_msg;
@@ -157,7 +160,6 @@ double receive_packet(int sockfd, struct timeval *send_time, t_ping_config confi
             return -1;
         }
         else if (config.verbose) {
-            char ip_str[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
             printf("From %s: icmp_type=%d icmp_code=%d\n", 
                    ip_str, icmp->type, icmp->code);

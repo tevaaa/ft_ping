@@ -60,9 +60,15 @@ int main(int argc, char **argv)
         seq++;
         usleep(config.interval * 1000000);
     }
-    double avg = rtt_sum / packets_received;
-    double variance = (rtt_sum_squares / packets_received) - (avg * avg);
-    double mdev = sqrt(variance);
+    double avg = 0;
+    double variance = 0;
+    double mdev = 0;
+
+    if (packets_received > 0) {
+        avg = rtt_sum / packets_received;
+        variance = (rtt_sum_squares / packets_received) - (avg * avg);
+        mdev = sqrt(variance);
+    }
 
     printf("--- %s ping statistics ---\n", config.target);
     printf("%d packets transmitted, %d packets received, %0.f%% packet loss\n",
