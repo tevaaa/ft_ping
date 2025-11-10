@@ -46,6 +46,9 @@ int main(int argc, char **argv)
         packets_sent ++;
 
         rtt = receive_packet(sockfd, &send_time, config, id);
+        if (rtt < 0) {
+            usleep(config.timeout * 1000000);
+        }
         if (rtt > 0) {
             packets_received ++;
             // stats
