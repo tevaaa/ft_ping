@@ -110,17 +110,15 @@ double receive_packet(int sockfd, struct timeval *send_time, t_ping_config confi
     timeout.tv_usec = 0;
 
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-        perror("setsockopt timeout");
         return -1;
     }
 
     while (1) {
         ssize_t nb_bytes = recvmsg(sockfd, &msg, 0);
         gettimeofday(&recv_time, NULL);
-
         if (nb_bytes < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return -1; // Timeout
+                return -2; // Timeout
             }
             return -1;
         }
@@ -192,11 +190,6 @@ double receive_packet(int sockfd, struct timeval *send_time, t_ping_config confi
             
             printf("%d bytes from %s: %s\n", (int)nb_bytes, ip_str, error_msg);
             return -1;
-        }
-        else if (config.verbose) {
-            inet_ntop(AF_INET, &sender.sin_addr, ip_str, INET_ADDRSTRLEN);
-            printf("From %s: icmp_type=%d icmp_code=%d\n", 
-                   ip_str, icmp->type, icmp->code);
         }
     }
 }
