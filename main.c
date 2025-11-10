@@ -75,7 +75,7 @@ int main(int argc, char **argv)
            packets_sent, packets_received, 
            packets_sent > 0 ? (100.0 * (packets_sent - packets_received)) / packets_sent : 0.0);
     if (packets_received > 0)
-        printf("round-trip min/avg/max/mdev = %.3f/%.3f/%.3f/%.3f ms\n", rtt_min, avg, rtt_max, mdev);
+        printf("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n", rtt_min, avg, rtt_max, mdev);
 
     close(sockfd);
 
